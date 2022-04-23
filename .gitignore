@@ -1,5 +1,7 @@
-
+.idea
 */obj
 */bin
 packages/*
 .vs/*
+Output
+*.user

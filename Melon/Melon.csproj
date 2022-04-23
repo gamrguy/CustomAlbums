@@ -1,0 +1,38 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net472</TargetFramework>
+    <Version>3.1.1.1</Version>
+    <LangVersion>9</LangVersion>
+    <MelonRefs>true</MelonRefs>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <AssemblyName>CustomAlbums</AssemblyName>
+  </PropertyGroup>
+    <ItemGroup>
+      <PackageReference Include="DotNetZip" Version="1.16.0" />
+      <PackageReference Include="SixLabors.ImageSharp" Version="1.0.4" />
+    </ItemGroup>
+  <Import Project="$(MsBuildThisFileDirectory)/../ILRepack/ILRepack.Lib.MSBuild.Task.targets" />
+  <Target Name="ILRepack" AfterTargets="Build">
+      <PropertyGroup>
+          <WorkingDirectory>$(OutputPath)</WorkingDirectory>
+      </PropertyGroup>
+      <ItemGroup>
+          <InputAssemblies Include="$(OutputPath)/$(AssemblyName).dll" />
+          <InputAssemblies Include="$(OutputPath)/DotNetZip.dll" />
+          <InputAssemblies Include="$(OutputPath)/NLayer.dll" />
+          <InputAssemblies Include="$(OutputPath)/SixLabors.ImageSharp.dll" />
+          <InputAssemblies Include="$(OutputPath)/System.Buffers.dll" />
+          <InputAssemblies Include="$(OutputPath)/System.Memory.dll" />
+          <InputAssemblies Include="$(OutputPath)/System.Numerics.Vectors.dll" />
+          <InputAssemblies Include="$(OutputPath)/System.Runtime.CompilerServices.Unsafe.dll" />
+          <IlRepackLibs Include="$(OutputPath)" />
+          <IlRepackLibs Include="$(MelonManaged)" />
+          <IlRepackLibs Include="$(MelonLoader)" />
+      </ItemGroup>
+      <Message Text="MERGING: @(InputAssemblies->'%(Filename)') into $(OutputAssembly)" Importance="High" />
+      <ILRepack Internalize="false" LibraryPath="@(IlRepackLibs)" OutputFile="$(OutputPath)/$(AssemblyName).dll" InputAssemblies="@(InputAssemblies)" />
+  </Target>
+  <Target Name="PostILRepackCopy" AfterTargets="ILRepack">
+     <Copy SourceFiles="$(OutputPath)\$(AssemblyName).dll" DestinationFolder="$(GameFolder)\Mods" />
+  </Target>
+</Project>
