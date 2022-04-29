@@ -12,7 +12,7 @@ namespace CustomAlbums
         public static void DoPatching(HarmonyLib.Harmony harmony) {
             Application.runInBackground = true;
 
-            WebApiPatch.DoPatching();
+            WebApiPatch.DoPatching(harmony);
             AssetPatch.DoPatching();
             SavesPatch.DoPatching(harmony);
 
