@@ -6,7 +6,7 @@ Check out the Muse Dash Modding Community Discord server for more information on
 
 https://discord.gg/mdmc
 
-The current version of the mod is guaranteed to function on Muse Dash 2.2.0 (April Fools 2022).  
+The current version of the mod is guaranteed to function on Muse Dash 2.3.0 (Virtual Idol Production).  
 MelonLoader 0.5.x is required.
 
 ### Branch

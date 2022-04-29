@@ -2,7 +2,7 @@
 using MelonLoader;
 using UnityEngine;
 
-[assembly: MelonInfo(typeof(CustomAlbums.ModEntry), "CustomAlbums", "3.1.1.1", "Mo10 & RobotLucca")]
+[assembly: MelonInfo(typeof(CustomAlbums.ModEntry), "CustomAlbums", "3.1.2.0", "Mo10 & RobotLucca")]
 [assembly: MelonGame("PeroPeroGames", "MuseDash")]
 
 namespace CustomAlbums
@@ -12,7 +12,7 @@ namespace CustomAlbums
         public static void DoPatching(HarmonyLib.Harmony harmony) {
             Application.runInBackground = true;
 
-            WebApiPatch.DoPatching();
+            WebApiPatch.DoPatching(harmony);
             AssetPatch.DoPatching();
             SavesPatch.DoPatching(harmony);
 
