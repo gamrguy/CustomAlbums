@@ -2,25 +2,17 @@ using Assets.Scripts.GameCore;
 using CustomAlbums.Data;
 using GameLogic;
 using Ionic.Zip;
-using Newtonsoft.Json.Linq;
 using RuntimeAudioClipLoader;
-using System;
-using UnityEngine;
-using UnityEngine.AddressableAssets;
-
-using ManagedGeneric = System.Collections.Generic;
-using System.IO;
-using NLayer;
-using Il2CppGeneric = Il2CppSystem.Collections.Generic;
-using Il2CppMemoryStream = Il2CppSystem.IO.MemoryStream;
 using SixLabors.ImageSharp;
 using SixLabors.ImageSharp.PixelFormats;
 using SixLabors.ImageSharp.Processing;
-using NVorbis.NAudioSupport;
-using UnhollowerBaseLib;
-using Assets.Scripts.PeroTools.Managers;
-using Assets.Scripts.PeroTools.Commons;
-using NAudio.Wave;
+using System;
+using System.IO;
+using UnityEngine;
+using UnityEngine.AddressableAssets;
+using Il2CppGeneric = Il2CppSystem.Collections.Generic;
+using Il2CppMemoryStream = Il2CppSystem.IO.MemoryStream;
+using ManagedGeneric = System.Collections.Generic;
 
 namespace CustomAlbums
 {
@@ -48,36 +40,28 @@ namespace CustomAlbums
         public static AudioClip MusicAudio { get; private set; }
         public static Il2CppMemoryStream MusicStream { get; private set; }
         /// <summary>
-        /// Load custom from folder or mdm file.
+        /// Load custom from folder or zip file.
         /// </summary>
         /// <param name="path"></param>
-        public Album(string path)
-        {
-            if (File.Exists($"{path}/info.json"))
-            {
-                // Load from folder
-                this.Info = File.OpenRead($"{path}/info.json").JsonDeserialize<AlbumInfo>();
-                this.BasePath = path;
-                this.IsPackaged = false;
-                verifyMaps();
-                return;
+        /// <exception cref="FileNotFoundException">If info.json is not present</exception>
+        public Album(string path) {
+            if(File.Exists($"{path}/info.json")) {
+                IsPackaged = false;
+            } else if(ZipFile.IsZipFile(path)) {
+                IsPackaged = true;
+            } else {
+                throw new FileNotFoundException("Invalid album path!!");
             }
-            else
-            {
-                // Load from package
-                using (ZipFile zip = ZipFile.Read(path))
-                {
-                    if (zip["info.json"] != null)
-                    {
-                        this.Info = zip["info.json"].OpenReader().JsonDeserialize<AlbumInfo>();
-                        this.BasePath = path;
-                        this.IsPackaged = true;
-                        verifyMaps();
-                        return;
-                    }
-                }
-            }
-            throw new FileNotFoundException($"info.json not found");
+
+            BasePath = path;
+
+            string name = IsPackaged ? Path.GetFileName(path) : Path.GetDirectoryName(path);
+            name = IsPackaged ? $"pkg_{name}" : $"fs_{name}";
+            Name = name.Replace("/", "_").Replace("\\", "_").Replace(".", "_");
+
+            Info = Open("info.json").JsonDeserialize<AlbumInfo>();
+
+            VerifyMaps();
         }
         /// <summary>
         /// TODO: Check this difficulty can be play.
@@ -91,7 +75,7 @@ namespace CustomAlbums
         /// Get chart hash.
         /// TODO: for custom score.
         /// </summary>
-        public void verifyMaps()
+        public void VerifyMaps()
         {
             foreach (var mapIdx in Info.GetDifficulties().Keys)
             {
