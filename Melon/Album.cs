@@ -39,6 +39,7 @@ namespace CustomAlbums
         public Sprite CoverSprite { get; private set; }
         public static AudioClip MusicAudio { get; private set; }
         public static Il2CppMemoryStream MusicStream { get; private set; }
+
         /// <summary>
         /// Load custom from folder or zip file.
         /// </summary>
@@ -55,7 +56,7 @@ namespace CustomAlbums
 
             BasePath = path;
 
-            string name = IsPackaged ? Path.GetFileName(path) : Path.GetDirectoryName(path);
+            var name = IsPackaged ? Path.GetFileNameWithoutExtension(path) : Path.GetFileName(path);
             name = IsPackaged ? $"pkg_{name}" : $"fs_{name}";
             Name = name.Replace("/", "_").Replace("\\", "_").Replace(".", "_");
 
@@ -63,6 +64,7 @@ namespace CustomAlbums
 
             VerifyMaps();
         }
+
         /// <summary>
         /// TODO: Check this difficulty can be play.
         /// </summary>
