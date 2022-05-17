@@ -77,7 +77,11 @@ namespace CustomAlbums
                         var album = new Album(path);
                         album.Index = nextIndex++;
 
+                        if(LoadedAlbums.ContainsKey(album.Name)) {
+                            throw new Exception("Duplicate chart file name!");
+                        }
                         LoadedAlbums.Add(album.Name, album);
+                        LoadedAlbumsByUid.Add($"{Uid}-{album.Index}", album);
 
                         AssetKeys.Add($"{album.Name}_demo");
                         AssetKeys.Add($"{album.Name}_music");
@@ -95,7 +99,7 @@ namespace CustomAlbums
                         // Preload chart cover, and never unload it
                         ResourcesManager.instance.LoadFromName<Sprite>($"{album.Name}_cover").hideFlags |= HideFlags.DontUnloadUnusedAsset;
                     } catch(Exception e) {
-                        Log.Warning($"{path} is not a valid MDM file/folder: {e.Message}");
+                        Log.Warning($"Invalid MDM file/folder: {e.Message} | {path}");
                     }
                 }
 
@@ -110,20 +114,6 @@ namespace CustomAlbums
 
             } catch(Exception e) {
                 Log.Error("Exception while loading albums: " + e);
-            }
-        }
-
-        /// <summary>
-        /// Loads and registers a chart from the given path
-        /// </summary>
-        /// <param name="path"></param>
-        public static void LoadAlbum(string path) {
-            Album album = null;
-            try {
-                album = new Album(path);
-            } catch {
-                Log.Warning($"Could not load album at {path}!");
-                return;
             }
         }
 
