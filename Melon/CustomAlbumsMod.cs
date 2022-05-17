@@ -24,7 +24,7 @@ namespace CustomAlbums
             Application.runInBackground = true;
 
             // Apply patches
-            WebApiPatch.DoPatching();
+            WebApiPatch.DoPatching(HarmonyInstance);
             AssetPatch.DoPatching();
             SavesPatch.DoPatching(HarmonyInstance);
 
