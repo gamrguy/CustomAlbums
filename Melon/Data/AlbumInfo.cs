@@ -20,6 +20,7 @@ namespace CustomAlbums.Data
         public string name_ja;
         public string name_zh_hans;
         public string name_zh_hant;
+        public string name_romanized;
 
         public string author;
         public string author_en;

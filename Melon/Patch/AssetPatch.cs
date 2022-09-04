@@ -151,6 +151,9 @@ namespace CustomAlbums.Patch
                     if(info.searchTags != null) {
                         tags.AddRange(info.searchTags);
                     }
+                    if(!string.IsNullOrEmpty(info.name_romanized)) {
+                        tags.Add(info.name_romanized);
+                    }
                     searchTag.tag = new Il2CppStringArray(tags.ToArray());
 
                     config.m_Dictionary.Add(searchTag.uid, searchTag);
