@@ -10,6 +10,8 @@ using Assets.Scripts.PeroTools.Commons;
 using Assets.Scripts.PeroTools.Managers;
 using NVorbis.NAudioSupport;
 using UnityEngine;
+using Assets.Scripts.UI.Panels.PnlMusicTag;
+using Assets.Scripts.UI.Panels;
 
 namespace CustomAlbums
 {
@@ -102,7 +104,7 @@ namespace CustomAlbums
             var remaining = sampleCount;
             var index = 0;
             var audioClip = AudioClip.Create(name, sampleCount / waveStream.WaveFormat.Channels, waveStream.WaveFormat.Channels, waveStream.WaveFormat.SampleRate, false);
-
+            //Log.Info($"Name: {name} | SampleCount: {sampleCount} | Channels: {waveStream.WaveFormat.Channels} | SampleRate: {waveStream.WaveFormat.SampleRate} | BytesPerSample: {waveStream.WaveFormat.BitsPerSample/8}");
             Coroutine routine = null;
             routine = SingletonMonoBehaviour<CoroutineManager>.instance.StartCoroutine(
                 (Il2CppSystem.Action)delegate { },
@@ -120,8 +122,19 @@ namespace CustomAlbums
 
                     var dataSet = new Il2CppStructArray<float>(Math.Min(ASYNC_READ_SPEED, remaining));
                     var readCount = waveStream.Read(dataSet, 0, dataSet.Length);
-
-                    audioClip.SetData(dataSet, index / waveStream.WaveFormat.Channels);
+                    
+                    try {
+                        audioClip.SetData(dataSet, index / waveStream.WaveFormat.Channels);
+                    } catch(Exception e) {
+                        if(((double)waveStream.Position)/1000 > waveStream.Length) {
+                            Log.Warning("Possible over-read of audio file, this is a file-dependent anomaly. Consider making a minimal edit and re-saving.");
+                        }
+                        Log.Error($"Exception while reading at offset {index} of {((double)waveStream.Position)/1000}/{waveStream.Length} in {name}, aborting: {e.Message}");
+                        waveStream.Dispose();
+                        currentRoutine = null;
+                        coroutines.Remove(name);
+                        return true;
+                    }
 
                     index += readCount;
                     remaining -= readCount;
