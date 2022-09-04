@@ -75,7 +75,12 @@ namespace CustomAlbums.Patch
 
             if (_assetName == "LocalizationSettings")
                 return assetPtr;
-            string lang = Assets.Scripts.PeroTools.Commons.SingletonScriptableObject<LocalizationSettings>.instance.GetActiveOption("Language");
+            string lang = SingletonScriptableObject<LocalizationSettings>.instance.GetActiveOption("Language");
+            var langs = new List<string>{ "English", "ChineseS", "ChineseT", "Japanese", "Korean" };
+            var splitName = _assetName.Split('_');
+            if(splitName.Length == 2 && langs.Contains(splitName[1])) {
+                lang = splitName[1];
+            }
 
             UnityEngine.Object newAsset = null;
 
@@ -135,6 +140,21 @@ namespace CustomAlbums.Patch
                     if (!string.IsNullOrEmpty(info.difficulty4))
                         jObject.Add("difficulty4", info.difficulty4);
                     jArray.Add(jObject);
+
+                    // Search tags
+                    var config = Singleton<ConfigManager>.instance.GetConfigObject<Assets.Scripts.Database.DBConfigMusicSearchTag>();
+                    var searchTag = new Assets.Scripts.Database.MusicSearchTagInfo();
+                    searchTag.uid = (string)jObject["uid"];
+                    searchTag.listIndex = config.count;
+
+                    var tags = new List<string> { "custom albums" };
+                    if(info.searchTags != null) {
+                        tags.AddRange(info.searchTags);
+                    }
+                    searchTag.tag = new Il2CppStringArray(tags.ToArray());
+
+                    config.m_Dictionary.Add(searchTag.uid, searchTag);
+                    config.list.Add(searchTag);
                 }
                 newAsset = CreateTextAsset(_assetName, jArray.JsonSerialize());
                 if(!Singleton<ConfigManager>.instance.m_Dictionary.ContainsKey(_assetName)) Singleton<ConfigManager>.instance.Add(_assetName, ((TextAsset)newAsset).text);

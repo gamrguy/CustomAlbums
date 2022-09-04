@@ -52,6 +52,8 @@ namespace CustomAlbums.Data
         public int hideBmsDifficulty;
         public string hideBmsMessage;
 
+        public string[] searchTags;
+
         public string GetName(string lang = null)
         {
             // If "name_<lang>" not avaliable will return "name"
