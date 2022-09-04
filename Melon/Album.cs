@@ -21,6 +21,7 @@ using UnhollowerBaseLib;
 using Assets.Scripts.PeroTools.Managers;
 using Assets.Scripts.PeroTools.Commons;
 using NAudio.Wave;
+using Assets.Scripts.Database;
 
 namespace CustomAlbums
 {
@@ -224,18 +225,31 @@ namespace CustomAlbums
                         return null;
                     }
 
-                    MusicConfigReader reader = MusicConfigReader.Instance;
-                    reader.ClearData();
-                    reader.bms = bms;
-                    reader.Init(mapName);
+                    MusicConfigReader reader = GameGlobal.configReader.Cast<MusicConfigReader>();
+                    var stageInfo = new StageInfo();
+                    stageInfo.mapName = mapName;
+                    GlobalDataBase.dbStageInfo.SetStageInfo(stageInfo);
+                    GlobalDataBase.dbStageInfo.m_BmsChart = bms;
 
-                    var musicDatas = reader.GetData();
+                    reader.Init();
+
+                    var musicDatas = reader.m_DataBuffer;
                     var il2cppDatas = new Il2CppGeneric.List<MusicData>();
                     foreach(var data in musicDatas) {
                         il2cppDatas.Add(data.Cast<MusicData>());
                     }
 
-                    StageInfo stageInfo = new StageInfo
+                    stageInfo.musicDatas = il2cppDatas;
+                    stageInfo.delay = GlobalDataBase.dbStageInfo.m_Delay;
+                    stageInfo.music = $"{Name}_music";
+                    stageInfo.scene = (string)bms.info["GENRE"];
+                    stageInfo.difficulty = index;
+                    stageInfo.bpm = bms.GetBpm();
+                    stageInfo.md5 = bms.md5;
+                    stageInfo.sceneEvents = bms.GetSceneEvents();
+                    stageInfo.name = Info.name;
+
+                    /*StageInfo stageInfo = new StageInfo
                     {
                         musicDatas = il2cppDatas,
                         delay = reader.delay,
@@ -248,7 +262,10 @@ namespace CustomAlbums
                         sceneEvents = reader.sceneEvents,
                         name = Info.name
                     };
-                    Log.Debug($"Delay: {reader.delay.ToString()}");
+                    Log.Debug($"Delay: {reader.delay.ToString()}");*/
+
+                    //GlobalDataBase.s_StageInfo = tempStageInfo;
+
                     return stageInfo;
                 }
             }
