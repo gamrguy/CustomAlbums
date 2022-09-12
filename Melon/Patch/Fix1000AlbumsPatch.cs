@@ -12,9 +12,10 @@ namespace CustomAlbums.Patch
     /// Also stops the music index and search bar from crashing on use.
     /// </summary>
     [HarmonyPatch(typeof(PnlMusicTag), nameof(PnlMusicTag.InitBaseUi))]
+    //[HarmonyPatch(typeof(MusicTagManager), nameof(MusicTagManager.InitDatas))]
     internal static class Fix1000AlbumsPatch
     {
-        private static void Prefix() {
+        private static void Postfix() {
             var config = Singleton<ConfigManager>.instance;
             var albums = config.GetConfigObject<DBConfigAlbums>(-1);
             // Custom album + 2 "virtual" albums for internal use
