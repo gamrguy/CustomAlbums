@@ -18,11 +18,15 @@ namespace CustomAlbums.Patch
     internal static class FixLevelDesignerSearchPatch
     {
         private static bool Prefix(ref bool __result, PeroPeroGames.PeroString peroString, MusicInfo musicInfo, string containsText) {
-            __result |= peroString.LowerContains(musicInfo.levelDesigner, containsText);
+            if(string.IsNullOrEmpty(containsText)) return false;
+
+            __result |= peroString.LowerContains(musicInfo.levelDesigner ?? "", containsText);
             if(__result) return false;
 
-            for(int i = 0; i <= 4; i++) {
-                __result |= peroString.LowerContains(musicInfo.GetLevelDesignerStringByIndex(i), containsText);
+            for(int i = 1; i <= 5; i++) {
+                var diff = musicInfo.GetMusicLevelStringByDiff(i, false);
+                if(string.IsNullOrEmpty(diff) || diff == "0") continue;
+                __result |= peroString.LowerContains(musicInfo.GetLevelDesignerStringByIndex(i) ?? "", containsText);
                 if(__result) return false;
             }
             return false;

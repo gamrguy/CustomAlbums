@@ -19,23 +19,23 @@ namespace CustomAlbums.Patch
         private static bool Prefix(MusicInfo __instance, ref string __result, int index) {
             switch(index) {
                 case 1:
-                    __result = __instance.levelDesigner1;
+                    __result = __instance.m_MaskValue.ContainsKey("levelDesigner1") ? __instance.m_MaskValue["levelDesigner1"].ToString() : __instance.levelDesigner1;
                     break;
                 case 2:
-                    __result = __instance.levelDesigner2;
+                    __result = __instance.m_MaskValue.ContainsKey("levelDesigner2") ? __instance.m_MaskValue["levelDesigner2"].ToString() : __instance.levelDesigner2;
                     break;
                 case 3:
-                    __result = __instance.levelDesigner3;
+                    __result = __instance.m_MaskValue.ContainsKey("levelDesigner3") ? __instance.m_MaskValue["levelDesigner3"].ToString() : __instance.levelDesigner3;
                     break;
                 case 4:
-                    __result = __instance.levelDesigner4;
+                    __result = __instance.m_MaskValue.ContainsKey("levelDesigner4") ? __instance.m_MaskValue["levelDesigner4"].ToString() : __instance.levelDesigner4;
                     break;
                 case 5:
-                    __result = __instance.levelDesigner5;
+                    __result = __instance.m_MaskValue.ContainsKey("levelDesigner5") ? __instance.m_MaskValue["levelDesigner5"].ToString() : __instance.levelDesigner5;
                     break;
             }
 
-            if(string.IsNullOrEmpty(__result)) __result = __instance.levelDesigner;
+            if(string.IsNullOrEmpty(__result) || __result == "?") __result = __instance.m_MaskValue.ContainsKey("levelDesigner") ? __instance.m_MaskValue["levelDesigner"].ToString() : __instance.levelDesigner;
             if(string.IsNullOrEmpty(__result)) __result = "?????";
             return false;
         }
