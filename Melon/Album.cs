@@ -1,8 +1,6 @@
 using Assets.Scripts.GameCore;
 using CustomAlbums.Data;
-using GameLogic;
 using Ionic.Zip;
-using Newtonsoft.Json.Linq;
 using RuntimeAudioClipLoader;
 using System;
 using UnityEngine;
@@ -16,19 +14,15 @@ using Il2CppMemoryStream = Il2CppSystem.IO.MemoryStream;
 using SixLabors.ImageSharp;
 using SixLabors.ImageSharp.PixelFormats;
 using SixLabors.ImageSharp.Processing;
-using NVorbis.NAudioSupport;
-using UnhollowerBaseLib;
-using Assets.Scripts.PeroTools.Managers;
-using Assets.Scripts.PeroTools.Commons;
-using NAudio.Wave;
 using Assets.Scripts.Database;
+using Assets.Scripts.Structs;
 
 namespace CustomAlbums
 {
 
     public class Album
     {
-        private static readonly Logger Log = new Logger("Album");
+        private static readonly Logger Log = new Logger(nameof(Album));
         public static readonly ManagedGeneric.Dictionary<string, AudioFormat> AudioFormatMapping = new ManagedGeneric.Dictionary<string, AudioFormat>()
             {
                 {".aiff", AudioFormat.aiff},
@@ -45,34 +39,31 @@ namespace CustomAlbums
         public string Name;
 
         public Texture2D CoverTex { get; private set; }
-        public Sprite CoverSprite { get; private set; }
+        public Sprite CoverSprite { get => CoverSpriteFrames[0]; }
+        public Sprite[] CoverSpriteFrames { get; private set; }
+        public int CoverFrameRateMs { get; private set; }
         public static AudioClip MusicAudio { get; private set; }
         public static Il2CppMemoryStream MusicStream { get; private set; }
+
         /// <summary>
         /// Load custom from folder or mdm file.
         /// </summary>
         /// <param name="path"></param>
-        public Album(string path)
-        {
-            if (File.Exists($"{path}/info.json"))
-            {
+        public Album(string path) {
+            if(File.Exists($"{path}/info.json")) {
                 // Load from folder
-                this.Info = File.OpenRead($"{path}/info.json").JsonDeserialize<AlbumInfo>();
-                this.BasePath = path;
-                this.IsPackaged = false;
+                Info = File.OpenRead($"{path}/info.json").JsonDeserialize<AlbumInfo>();
+                BasePath = path;
+                IsPackaged = false;
                 verifyMaps();
                 return;
-            }
-            else
-            {
+            } else {
                 // Load from package
-                using (ZipFile zip = ZipFile.Read(path))
-                {
-                    if (zip["info.json"] != null)
-                    {
-                        this.Info = zip["info.json"].OpenReader().JsonDeserialize<AlbumInfo>();
-                        this.BasePath = path;
-                        this.IsPackaged = true;
+                using(ZipFile zip = ZipFile.Read(path)) {
+                    if(zip["info.json"] != null) {
+                        Info = zip["info.json"].OpenReader().JsonDeserialize<AlbumInfo>();
+                        BasePath = path;
+                        IsPackaged = true;
                         verifyMaps();
                         return;
                     }
@@ -80,35 +71,29 @@ namespace CustomAlbums
             }
             throw new FileNotFoundException($"info.json not found");
         }
+
         /// <summary>
         /// TODO: Check this difficulty can be play.
         /// </summary>
         /// <returns></returns>
-        public bool IsPlayable()
-        {
-            return true;
-        }
+        public bool IsPlayable() => true;
+
         /// <summary>
         /// Get chart hash.
         /// TODO: for custom score.
         /// </summary>
-        public void verifyMaps()
-        {
-            foreach (var mapIdx in Info.GetDifficulties().Keys)
-            {
-                try
-                {
-                    using (var stream = Open($"map{mapIdx}.bms"))
-                    {
+        public void verifyMaps() {
+            foreach(var mapIdx in Info.GetDifficulties().Keys) {
+                try {
+                    using(var stream = Open($"map{mapIdx}.bms")) {
                         availableMaps.Add(mapIdx, stream.ToArray().GetMD5().ToString("x2"));
                     }
-                }
-                catch (Exception)
-                {
+                } catch(Exception) {
                     // Pass
                 }
             }
         }
+
         /// <summary>
         /// Get cover sprite
         /// </summary>
@@ -116,13 +101,34 @@ namespace CustomAlbums
         unsafe public Sprite GetCover()
         {
             try {
+                int frames = 0;
                 using(Stream stream = Open("cover.png")) {
                     var image = Image.Load<Rgba32>(stream);
                     image.Mutate(processor => processor.Flip(FlipMode.Vertical));
-                    image.TryGetSinglePixelSpan(out var pixels);
+                    frames = image.Frames.Count;
+                    CoverTex = new Texture2D(image.Width, image.Height * frames, TextureFormat.RGBA32, false);
 
-                    CoverTex = new Texture2D(image.Width, image.Height, TextureFormat.RGBA32, false);
+                    Image<Rgba32> outImage;
 
+                    if(frames > 1) {
+                        outImage = new Image<Rgba32>(image.Width, image.Height * frames);
+                        for(var i = 0; i < frames; i++) {
+                            image.Frames[i].TryGetSinglePixelSpan(out var px);
+                            var pxArr = px.ToArray();
+                            outImage.Mutate(processor => processor.DrawImage(Image.LoadPixelData(pxArr, image.Width, image.Height), new Point(0, image.Height * i), 1));
+                        }
+                    } else {
+                        outImage = image;
+                    }
+
+                    if(frames > 1) {
+                        CoverFrameRateMs = image.Frames.RootFrame.Metadata.GetGifMetadata().FrameDelay * 10;
+                    } else {
+                        CoverFrameRateMs = 1000;
+                    }
+
+                    outImage.TryGetSinglePixelSpan(out var pixels);
+                    Log.Debug(pixels.Length);
                     fixed(void* pixelsPtr = pixels)
                         CoverTex.LoadRawTextureData((IntPtr)pixelsPtr, pixels.Length * 4);
                     CoverTex.Apply(false, true);
@@ -130,10 +136,15 @@ namespace CustomAlbums
                     Log.Debug($"{CoverTex.width}x{CoverTex.height}");
                 }
 
-                CoverSprite = Sprite.Create(CoverTex,
-                    new Rect(0, 0, CoverTex.width, CoverTex.height),
-                    new Vector2(CoverTex.width / 2, CoverTex.height / 2));
-                CoverSprite.name = AlbumManager.GetAlbumKeyByIndex(Index) + "_cover";
+                CoverSpriteFrames = new Sprite[frames];
+                for(var i = 0; i < frames; i++) {
+                    CoverSpriteFrames[i] = Sprite.Create(CoverTex,
+                        new Rect(0, (CoverTex.height / frames) * i, CoverTex.width, CoverTex.height / frames),
+                        new Vector2(CoverTex.width / 2, CoverTex.height / 2 / frames)
+                    );
+                    CoverSpriteFrames[i].name = AlbumManager.GetAlbumKeyByIndex(Index) + "_cover_" + i;
+                    CoverSpriteFrames[i].hideFlags |= HideFlags.DontUnloadUnusedAsset;
+                }
 
                 return CoverSprite;
             } catch(FileNotFoundException e) {
@@ -145,27 +156,24 @@ namespace CustomAlbums
             // Empty pixel
             return Sprite.Create(new Texture2D(1, 1), new Rect(0, 0, 1, 1), new Vector2(0.5f, 0.5f));
         }
+
         /// <summary>
         /// Get music AudioClip.
         /// </summary>
         /// <param name="name">"music" or "demo"</param>
         /// <returns></returns>
-        public AudioClip GetMusic(string name = "music")
-        {
+        public AudioClip GetMusic(string name = "music") {
             ManagedGeneric.List<string> fileNames = new ManagedGeneric.List<string>();
-            foreach (var ext in AudioFormatMapping.Keys)
+            foreach(var ext in AudioFormatMapping.Keys)
                 fileNames.Add(name + ext);
 
-            if (!TryOpenOne(fileNames, out var fileName, out var buffer))
-            {
+            if(!TryOpenOne(fileNames, out var fileName, out var buffer)) {
                 Log.Warning($"Not found: {name} from: {BasePath}");
                 return null;
             }
 
-            try
-            {
-                if (!AudioFormatMapping.TryGetValue(Path.GetExtension(fileName), out var format))
-                {
+            try {
+                if(!AudioFormatMapping.TryGetValue(Path.GetExtension(fileName), out var format)) {
                     Log.Warning($"Unknown audio format: {fileName} from: {BasePath}");
                     return null;
                 }
@@ -173,8 +181,7 @@ namespace CustomAlbums
                 var audioName = $"{Name}_{name}";
                 AudioClip audioClip = null;
 
-                switch (format)
-                {
+                switch(format) {
                     case AudioFormat.aiff:
                     case AudioFormat.wav:
                         audioClip = Manager.Load(buffer.ToIL2CppStream(), format, audioName);
@@ -188,15 +195,11 @@ namespace CustomAlbums
                 }
 
                 return audioClip;
-            }
-            catch (Exception ex)
-            {
+            } catch(Exception ex) {
                 Log.Error($"Could not load audio {Name}_{name}: {ex}");
             }
             return null;
         }
-
-        
 
         /// <summary>
         /// Load map.
@@ -206,41 +209,34 @@ namespace CustomAlbums
         /// </summary>
         /// <param name="index">map index</param>
         /// <returns></returns>
-        public StageInfo GetMap(int index)
-        {
-            try
-            {
-                using (Stream stream = Open($"map{index}.bms"))
-                {
-                    /* 1.加载bms
-                     * 2.转换为MusicData
-                     * 3.创建StageInfo
-                     * */
-
+        public StageInfo GetMap(int index) {
+            try {
+                using(Stream stream = Open($"map{index}.bms")) {
                     var mapName = $"{Name}_map{index}";
 
                     var bms = BMSCLoader.Load(stream, mapName);
-                    if (bms == null)
-                    {
+                    if(bms == null) {
                         return null;
                     }
 
-                    MusicConfigReader reader = GameGlobal.configReader.Cast<MusicConfigReader>();
-                    var stageInfo = new StageInfo();
+                    var stageInfo = ScriptableObject.CreateInstance<StageInfo>();
                     stageInfo.mapName = mapName;
-                    GlobalDataBase.dbStageInfo.SetStageInfo(stageInfo);
-                    GlobalDataBase.dbStageInfo.m_BmsChart = bms;
 
-                    reader.Init();
-
-                    var musicDatas = reader.m_DataBuffer;
-                    var il2cppDatas = new Il2CppGeneric.List<MusicData>();
-                    foreach(var data in musicDatas) {
-                        il2cppDatas.Add(data.Cast<MusicData>());
+                    // Try loading talk file
+                    try {
+                        using(Stream talkStream = Open($"map{index}.talk")) {
+                            stageInfo.dialogEvents = new StreamReader(talkStream).ReadToEnd().IL2CppJsonDeserialize<Il2CppGeneric.Dictionary<string, Il2CppGeneric.List<GameDialogArgs>>>();
+                        }
+                    } catch(FileNotFoundException) {
+                    } catch(Exception e) {
+                        Log.Error(e);
                     }
 
-                    stageInfo.musicDatas = il2cppDatas;
-                    stageInfo.delay = GlobalDataBase.dbStageInfo.m_Delay;
+                    GlobalDataBase.dbStageInfo.SetStageInfo(stageInfo);
+
+                    // Sets stageInfo.musicDatas and stageInfo.delay
+                    BMSCLoader.TransmuteData(bms, stageInfo);
+                    
                     stageInfo.music = $"{Name}_music";
                     stageInfo.scene = (string)bms.info["GENRE"];
                     stageInfo.difficulty = index;
@@ -249,113 +245,82 @@ namespace CustomAlbums
                     stageInfo.sceneEvents = bms.GetSceneEvents();
                     stageInfo.name = Info.name;
 
-                    /*StageInfo stageInfo = new StageInfo
-                    {
-                        musicDatas = il2cppDatas,
-                        delay = reader.delay,
-                        mapName = mapName,
-                        music = $"{Name}_music",
-                        scene = (string)reader.bms.info["GENRE"],
-                        difficulty = index,
-                        bpm = reader.bms.GetBpm(),
-                        md5 = reader.bms.md5,
-                        sceneEvents = reader.sceneEvents,
-                        name = Info.name
-                    };
-                    Log.Debug($"Delay: {reader.delay.ToString()}");*/
-
-                    //GlobalDataBase.s_StageInfo = tempStageInfo;
-
                     return stageInfo;
                 }
-            }
-            catch (Exception ex)
-            {
+            } catch(Exception ex) {
                 Log.Error(ex);
             }
             return null;
         }
+
         /// <summary>
-        /// Destory AudioClip instance and close buffer stream.
+        /// Destroy AudioClip instance and close buffer stream.
         /// </summary>
-        public static void DestoryAudio()
-        {
-            if (MusicAudio != null)
-            {
+        public static void DestroyAudio() {
+            if(MusicAudio != null) {
                 UnityEngine.Object.Destroy(MusicAudio);
                 MusicAudio = null;
             }
-            if (MusicStream != null)
-            {
+            if(MusicStream != null) {
                 MusicStream.Dispose();
                 MusicStream = null;
             }
         }
+
         /// <summary>
-        /// Destory Sprite instance and destory Texture2D instance.
+        /// Destroy Sprite instance and destroy Texture2D instance.
         /// </summary>
-        public void DestoryCover()
-        {
-            if (CoverSprite != null)
-            {
+        public void DestroyCover() {
+            if(CoverSprite != null) {
                 Addressables.Release(CoverSprite);
                 UnityEngine.Object.Destroy(CoverSprite);
-                CoverSprite = null;
+                //CoverSprite = null;
+                CoverSpriteFrames = null;
             }
-            if (CoverTex != null)
-            {
+            if(CoverTex != null) {
                 Addressables.Release(CoverTex);
                 UnityEngine.Object.Destroy(CoverTex);
                 CoverTex = null;
             }
         }
+
         /// <summary>
-        /// Open a streaming from the file.
+        /// Open Stream from file.
         /// </summary>
         /// <param name="filePath"></param>
         /// <returns></returns>
         /// <exception cref="FileNotFoundException"></exception>
-        private Stream Open(string filePath)
-        {
-            if (IsPackaged)
-            {
-                // load from package
-                using (ZipFile zip = ZipFile.Read(BasePath))
-                {
-                    if (!zip.ContainsEntry(filePath))
+        private Stream Open(string filePath) {
+            if(IsPackaged) {
+                // Load from package
+                using(ZipFile zip = ZipFile.Read(BasePath)) {
+                    if(!zip.ContainsEntry(filePath))
                         throw new FileNotFoundException($"File not found: {filePath} in {BasePath}");
-                    // ModLogger.Debug($"Loaded:{BasePath}/{filePath}");
                     // CrcCalculatorStream not support set_position, Read all bytes then convert to MemoryStream
                     return zip[filePath].OpenReader().ToArray().ToStream();
                 }
-            }
-            else
-            {
+            } else {
                 // Load from folder
                 var fullPath = Path.Combine(BasePath, filePath);
 
-                if (!File.Exists(fullPath))
+                if(!File.Exists(fullPath))
                     throw new FileNotFoundException($"File not found: {fullPath}");
-                // ModLogger.Debug($"Loaded:{BasePath}/{filePath}");
                 return File.OpenRead(fullPath);
             }
         }
+
         /// <summary>
-        /// Open a streaming from the file list returns only the first exist one.
+        /// Open Stream from first existing file in list.
         /// </summary>
         /// <param name="filePaths"></param>
         /// <param name="openedFilePath"></param>
         /// <returns></returns>
-        private bool TryOpenOne(ManagedGeneric.IEnumerable<string> filePaths, out string openedFilePath, out byte[] buffer)
-        {
-            if (IsPackaged)
-            {
+        private bool TryOpenOne(ManagedGeneric.IEnumerable<string> filePaths, out string openedFilePath, out byte[] buffer) {
+            if(IsPackaged) {
                 // load from package
-                using (ZipFile zip = ZipFile.Read(BasePath))
-                {
-                    foreach (var filePath in filePaths)
-                    {
-                        if (!zip.ContainsEntry(filePath))
+                using(ZipFile zip = ZipFile.Read(BasePath)) {
+                    foreach(var filePath in filePaths) {
+                        if(!zip.ContainsEntry(filePath))
                             continue;
                         openedFilePath = filePath;
                         // CrcCalculatorStream doesn't support set_position. We read all bytes
@@ -363,14 +328,11 @@ namespace CustomAlbums
                         return true;
                     }
                 }
-            }
-            else
-            {
+            } else {
                 // Load from folder
-                foreach (var filePath in filePaths)
-                {
+                foreach(var filePath in filePaths) {
                     var fullPath = Path.Combine(BasePath, filePath);
-                    if (!File.Exists(fullPath))
+                    if(!File.Exists(fullPath))
                         continue;
                     openedFilePath = filePath;
                     buffer = File.ReadAllBytes(fullPath);

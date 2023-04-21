@@ -17,6 +17,7 @@ using System.Reflection;
 using System.Text;
 using UnityEngine;
 using Ionic.Zip;
+using Assets.Scripts.Database;
 
 namespace CustomAlbums.Patch
 {
@@ -130,9 +131,9 @@ namespace CustomAlbums.Patch
         /// <param name="sceneName"></param>
         /// <param name="calllback"></param>
         /// <param name="withBack"></param>
-        public static void BattleExitPrefix(ref string sceneName, ref Il2CppSystem.Action calllback, ref bool backToPnlStage)
+        public static void BattleExitPrefix(ref string sceneName, ref Il2CppSystem.Action callback, ref bool backToPnlStage)
         {
-            string result = Singleton<DataManager>.instance["Account"]["SelectedMusicUid"].GetResult<string>();
+            string result = DataHelper.selectedMusicUid;
 
             if (result.StartsWith($"{AlbumManager.Uid}-"))
             {

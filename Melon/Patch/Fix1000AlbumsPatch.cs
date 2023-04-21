@@ -11,8 +11,7 @@ namespace CustomAlbums.Patch
     /// Makes a huge difference for systems without absurd disk read speeds.
     /// Also stops the music index and search bar from crashing on use.
     /// </summary>
-    [HarmonyPatch(typeof(PnlMusicTag), nameof(PnlMusicTag.InitBaseUi))]
-    //[HarmonyPatch(typeof(MusicTagManager), nameof(MusicTagManager.InitDatas))]
+    [HarmonyPatch(typeof(MusicTagManager), nameof(MusicTagManager.InitDatas))]
     internal static class Fix1000AlbumsPatch
     {
         private static void Postfix() {

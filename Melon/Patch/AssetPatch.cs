@@ -228,16 +228,20 @@ namespace CustomAlbums.Patch
             // Add to cache
             if (newAsset != null)
             {
-                if(!noCache) {
-                    if(LoadedAssets.ContainsKey(_assetName)) {
-                        Log.Warning($"{_assetName} is already cached, but was loaded again!");
-                        LoadedAssets[_assetName] = newAsset;
+                try {
+                    if(!noCache) {
+                        if(LoadedAssets.ContainsKey(_assetName)) {
+                            Log.Warning($"{_assetName} is already cached, but was loaded again!");
+                            LoadedAssets[_assetName] = newAsset;
+                        } else {
+                            Log.Debug($"Cached {_assetName}");
+                            LoadedAssets.Add(_assetName, newAsset);
+                        }
                     } else {
-                        Log.Debug($"Cached {_assetName}");
-                        LoadedAssets.Add(_assetName, newAsset);
+                        Log.Debug($"Loaded {_assetName}");
                     }
-                } else {
-                    Log.Debug($"Loaded {_assetName}");
+                } catch(Exception e) {
+                    Log.Error(e);
                 }
                 return newAsset.Pointer;
             }

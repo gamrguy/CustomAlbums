@@ -84,6 +84,7 @@ namespace CustomAlbums
                             nextIndex++;
 
                             LoadedAlbums.Add(album.Name, album);
+                            LoadedAlbumsByUid.Add($"{AlbumManager.Uid}-{album.Index}", album);
                             Log.Debug($"Album \"{album.Name}\" loaded.");
                         }
                     } catch(Exception ex) {
