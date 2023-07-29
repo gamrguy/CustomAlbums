@@ -16,6 +16,7 @@ using SixLabors.ImageSharp.PixelFormats;
 using SixLabors.ImageSharp.Processing;
 using Assets.Scripts.Database;
 using Assets.Scripts.Structs;
+using MelonLoader;
 
 namespace CustomAlbums
 {
@@ -98,26 +99,38 @@ namespace CustomAlbums
         /// Get cover sprite
         /// </summary>
         /// <returns></returns>
-        unsafe public Sprite GetCover()
-        {
+        unsafe public Sprite GetCover() {
             try {
                 int frames = 0;
+                int square = 0;
+                int origWidth = 0;
+                int origHeight = 0;
                 using(Stream stream = Open("cover.png")) {
                     var image = Image.Load<Rgba32>(stream);
                     image.Mutate(processor => processor.Flip(FlipMode.Vertical));
                     frames = image.Frames.Count;
-                    CoverTex = new Texture2D(image.Width, image.Height * frames, TextureFormat.RGBA32, false);
+                    square = (int)Math.Ceiling(Math.Sqrt(frames));
+                    CoverTex = null;
 
                     Image<Rgba32> outImage;
 
                     if(frames > 1) {
-                        outImage = new Image<Rgba32>(image.Width, image.Height * frames);
+                        CoverTex = new Texture2D(image.Width * square, image.Height * square, TextureFormat.RGBA32, false);
+                        outImage = new Image<Rgba32>(image.Width * square, image.Height * square);
+                        origWidth = image.Width;
+                        origHeight = image.Height;
+                        int xVal = 0;
                         for(var i = 0; i < frames; i++) {
+                            int yVal = (image.Height * i) % (square * image.Width);
+                            if(yVal == 0 && i > 0) {
+                                xVal += origWidth;
+                            }
                             image.Frames[i].TryGetSinglePixelSpan(out var px);
                             var pxArr = px.ToArray();
-                            outImage.Mutate(processor => processor.DrawImage(Image.LoadPixelData(pxArr, image.Width, image.Height), new Point(0, image.Height * i), 1));
+                            outImage.Mutate(processor => processor.DrawImage(Image.LoadPixelData(pxArr, image.Width, image.Height), new Point(xVal, yVal), 1));
                         }
                     } else {
+                        CoverTex = new Texture2D(image.Width, image.Height, TextureFormat.RGBA32, false);
                         outImage = image;
                     }
 
@@ -136,15 +149,31 @@ namespace CustomAlbums
                     Log.Debug($"{CoverTex.width}x{CoverTex.height}");
                 }
 
+                int xValue = 0;
+                int yValue = 0;
                 CoverSpriteFrames = new Sprite[frames];
-                for(var i = 0; i < frames; i++) {
-                    CoverSpriteFrames[i] = Sprite.Create(CoverTex,
-                        new Rect(0, (CoverTex.height / frames) * i, CoverTex.width, CoverTex.height / frames),
+                if(frames > 1) {
+                    for(var i = 0; i < frames; i++) {
+                        yValue = (origHeight * i) % (CoverTex.height);
+                        if(yValue == 0 && i > 0 && xValue < CoverTex.width - origWidth) {
+                            xValue += origHeight;
+                        }
+                        CoverSpriteFrames[i] = Sprite.Create(CoverTex,
+                            new Rect(xValue, yValue, origWidth, origHeight),
+                            new Vector2(origWidth * 0.5f, origHeight * 0.5f)
+                        );
+                        CoverSpriteFrames[i].name = AlbumManager.GetAlbumKeyByIndex(Index) + "_cover_" + i;
+                        CoverSpriteFrames[i].hideFlags |= HideFlags.DontUnloadUnusedAsset;
+                    }
+                } else {
+                    CoverSpriteFrames[0] = Sprite.Create(CoverTex,
+                        new Rect(0, 0, CoverTex.width, CoverTex.height / frames),
                         new Vector2(CoverTex.width / 2, CoverTex.height / 2 / frames)
                     );
-                    CoverSpriteFrames[i].name = AlbumManager.GetAlbumKeyByIndex(Index) + "_cover_" + i;
-                    CoverSpriteFrames[i].hideFlags |= HideFlags.DontUnloadUnusedAsset;
+                    CoverSpriteFrames[0].name = AlbumManager.GetAlbumKeyByIndex(Index) + "_cover_";
+                    CoverSpriteFrames[0].hideFlags |= HideFlags.DontUnloadUnusedAsset;
                 }
+
 
                 return CoverSprite;
             } catch(FileNotFoundException e) {
@@ -236,7 +265,7 @@ namespace CustomAlbums
 
                     // Sets stageInfo.musicDatas and stageInfo.delay
                     BMSCLoader.TransmuteData(bms, stageInfo);
-                    
+
                     stageInfo.music = $"{Name}_music";
                     stageInfo.scene = (string)bms.info["GENRE"];
                     stageInfo.difficulty = index;
