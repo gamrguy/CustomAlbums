@@ -105,7 +105,8 @@ namespace CustomAlbums
                 int square = 0;
                 int origWidth = 0;
                 int origHeight = 0;
-                using(Stream stream = Open("cover.png")) {
+
+                using(Stream stream = OpenOne(new string[] { "cover.png", "cover.gif" })) {
                     var image = Image.Load<Rgba32>(stream);
                     image.Mutate(processor => processor.Flip(FlipMode.Vertical));
                     frames = image.Frames.Count;
@@ -121,7 +122,7 @@ namespace CustomAlbums
                         origHeight = image.Height;
                         int xVal = 0;
                         for(var i = 0; i < frames; i++) {
-                            int yVal = (image.Height * i) % (square * image.Width);
+                            int yVal = (image.Height * i) % (square * image.Height);
                             if(yVal == 0 && i > 0) {
                                 xVal += origWidth;
                             }
@@ -156,7 +157,7 @@ namespace CustomAlbums
                     for(var i = 0; i < frames; i++) {
                         yValue = (origHeight * i) % (CoverTex.height);
                         if(yValue == 0 && i > 0 && xValue < CoverTex.width - origWidth) {
-                            xValue += origHeight;
+                            xValue += origWidth;
                         }
                         CoverSpriteFrames[i] = Sprite.Create(CoverTex,
                             new Rect(xValue, yValue, origWidth, origHeight),
@@ -336,6 +337,24 @@ namespace CustomAlbums
                     throw new FileNotFoundException($"File not found: {fullPath}");
                 return File.OpenRead(fullPath);
             }
+        }
+
+        /// <summary>
+        /// Opens first existing file from provided list.
+        /// </summary>
+        /// <param name="filePaths"></param>
+        /// <returns></returns>
+        /// <exception cref="FileNotFoundException"></exception>
+        private Stream OpenOne(string[] filePaths) {
+            foreach(var path in filePaths) {
+                try {
+                    return Open(path);
+                } catch {
+                    continue;
+                }
+            }
+
+            throw new FileNotFoundException($"File(s) not found: one of {filePaths}");
         }
 
         /// <summary>

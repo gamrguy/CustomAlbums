@@ -72,10 +72,10 @@
             <Private>false</Private>
             <HintPath>$(MelonManaged)\PeroTools2.dll</HintPath>
         </Reference>
-        <Reference Include="PeroTools2, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null">
+        <Reference Include="PeroTools2.Resources, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null">
             <SpecificVersion>false</SpecificVersion>
             <Private>false</Private>
-            <HintPath>$(MelonManaged)\PeroTools2.dll</HintPath>
+            <HintPath>$(MelonManaged)\PeroTools2.Resources.dll</HintPath>
         </Reference>
         <Reference Include="PeroTools2.Account, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null">
             <SpecificVersion>false</SpecificVersion>
