@@ -9,6 +9,7 @@ using System.IO;
 using System.Linq;
 using System.Reflection;
 using System.Text;
+using static Il2CppSystem.Globalization.CultureInfo;
 
 namespace CustomAlbums
 {
@@ -18,16 +19,21 @@ namespace CustomAlbums
         public static string OldFilePath => Path.Combine(Directory.GetCurrentDirectory(), "Mods/CustomAlbums.json");
         public static string FilePath => Path.Combine(Directory.GetCurrentDirectory(), "UserData/CustomAlbums.json");
 
+        public static Dictionary<string, IData> GameFailDictionary = new Dictionary<string, IData>();
+        public static HashSet<string> EasyPassSet = new HashSet<string>();
+        public static HashSet<string> HardPassSet = new HashSet<string>();
+        public static HashSet<string> MasterPassSet = new HashSet<string>();
+
+        public static bool IsInited = false;
+
         public static CustomData CustomData = new CustomData();
 
-        public static void Save()
-        {
+        public static void Save() {
             var path = Path.Combine(Directory.GetCurrentDirectory(), FilePath);
             File.WriteAllText(FilePath, CustomData.JsonSerialize());
         }
 
-        public static void Load()
-        {
+        public static void Load() {
             // Relocate old save files
             if(File.Exists(OldFilePath) && !File.Exists(FilePath)) {
                 File.Move(OldFilePath, FilePath);
@@ -54,8 +60,8 @@ namespace CustomAlbums
             }
         }
 
-        public static void SplitCustomData()
-        {
+        public static void SplitCustomData() {
+            if(!IsInited) return;
             var GameAccount = Singleton<DataManager>.instance["Account"];
             var GameAchievement = Singleton<DataManager>.instance["Achievement"];
             var GameSelectedIndex = GameAccount["SelectedMusicIndex"].GetResult<int>();
@@ -74,70 +80,63 @@ namespace CustomAlbums
             // Account.SelectedAlbumUid, Account.SelectedMusicIndex, Account.SelectedDifficulty
             CustomData.SelectedAlbum = null;
             CustomData.SelectedDifficulty = 2;
-            if (AlbumManager.MusicPackge == GameSelectedMusicPack)
-            {
+            if(AlbumManager.MusicPackge == GameSelectedMusicPack) {
                 CustomData.SelectedAlbum = AlbumManager.GetAlbumKeyByIndex(GameSelectedIndex);
                 CustomData.SelectedDifficulty = GameSelectedDifficulty;
             }
             // Account.Collections
             CustomData.Collections.Clear();
-            foreach (var uid in GameCollections.FindAll((Il2CppSystem.Predicate<string>)(s => s.StartsWith($"{AlbumManager.Uid}-"))))
-            {
+            foreach(var uid in GameCollections.FindAll((Il2CppSystem.Predicate<string>)(s => s.StartsWith($"{AlbumManager.Uid}-")))) {
                 var albumIndex = int.Parse(uid.RemoveFromStart($"{AlbumManager.Uid}-"));
                 var albumKey = AlbumManager.GetAlbumKeyByIndex(albumIndex);
 
-                if (AssertAlbumKeyIndex(albumKey, albumIndex))
+                if(AssertAlbumKeyIndex(albumKey, albumIndex))
                     CustomData.Collections.Add(albumKey);
             }
             // Account.Hide
             CustomData.Hides.Clear();
-            foreach (var uid in GameHides.FindAll((Il2CppSystem.Predicate<string>)(s => s.StartsWith($"{AlbumManager.Uid}-"))))
-            {
+            foreach(var uid in GameHides.FindAll((Il2CppSystem.Predicate<string>)(s => s.StartsWith($"{AlbumManager.Uid}-")))) {
                 var albumIndex = int.Parse(uid.RemoveFromStart($"{AlbumManager.Uid}-"));
                 var albumKey = AlbumManager.GetAlbumKeyByIndex(albumIndex);
 
-                if (AssertAlbumKeyIndex(albumKey, albumIndex))
+                if(AssertAlbumKeyIndex(albumKey, albumIndex))
                     CustomData.Hides.Add(albumKey);
             }
             // Account.History
             CustomData.History.Clear();
-            foreach (var uid in GameHistory.FindAll((Il2CppSystem.Predicate<string>)(s => s.StartsWith($"{AlbumManager.Uid}-"))))
-            {
+            foreach(var uid in GameHistory.FindAll((Il2CppSystem.Predicate<string>)(s => s.StartsWith($"{AlbumManager.Uid}-")))) {
                 var albumIndex = int.Parse(uid.RemoveFromStart($"{AlbumManager.Uid}-"));
                 var albumKey = AlbumManager.GetAlbumKeyByIndex(albumIndex);
 
-                if (AssertAlbumKeyIndex(albumKey, albumIndex))
+                if(AssertAlbumKeyIndex(albumKey, albumIndex))
                     CustomData.History.Add(albumKey);
             }
             // Achievement.highest
-            foreach (var highest in GameHighest.FindAll((Il2CppSystem.Predicate<IData>)(d => d["uid"].GetResult<string>().StartsWith($"{AlbumManager.Uid}-"))))
-            {
+            foreach(var highest in GameHighest.FindAll((Il2CppSystem.Predicate<IData>)(d => d["uid"].GetResult<string>().StartsWith($"{AlbumManager.Uid}-")))) {
                 var dUid = highest["uid"].GetResult<string>();
                 var albumIndex = int.Parse(dUid.RemoveFromStart($"{AlbumManager.Uid}-").Split('_')[0]);
                 var difficulty = int.Parse(dUid.RemoveFromStart($"{AlbumManager.Uid}-").Split('_')[1]);
                 var albumKey = AlbumManager.GetAlbumKeyByIndex(albumIndex);
 
-                if (!AssertAlbumKeyIndex(albumKey, albumIndex))
+                if(!AssertAlbumKeyIndex(albumKey, albumIndex))
                     continue;
 
-                var failData = GameFailCount.Find((Il2CppSystem.Predicate<IData>)(d => d["uid"].GetResult<string>() == dUid));
+                GameFailDictionary.TryGetValue(dUid, out var failData);
                 var failCount = failData?["count"].GetResult<int>() ?? 0;
                 var passed = false;
-                switch (difficulty)
-                {
+                switch(difficulty) {
                     case 1:
-                        passed = GameEasyPass.Contains(dUid);
+                        passed = EasyPassSet.Contains(dUid);
                         break;
                     case 2:
-                        passed = GameHardPass.Contains(dUid);
+                        passed = HardPassSet.Contains(dUid);
                         break;
                     case 3:
                     case 4:
-                        passed = GameMasterPass.Contains(dUid);
+                        passed = MasterPassSet.Contains(dUid);
                         break;
                 }
-                var score = new CustomScore()
-                {
+                var score = new CustomScore() {
                     Evaluate = highest["evaluate"].GetResult<int>(),
                     Score = highest["score"].GetResult<int>(),
                     Combo = highest["combo"].GetResult<int>(),
@@ -149,36 +148,34 @@ namespace CustomAlbums
                 };
 
                 // New
-                if (!CustomData.Highest.ContainsKey(albumKey))
+                if(!CustomData.Highest.ContainsKey(albumKey))
                     CustomData.Highest.Add(albumKey, new Dictionary<int, CustomScore>());
                 // Overwrite
-                if (CustomData.Highest[albumKey].ContainsKey(difficulty))
+                if(CustomData.Highest[albumKey].ContainsKey(difficulty))
                     CustomData.Highest[albumKey][difficulty] = score;
                 // Append
                 else
                     CustomData.Highest[albumKey].Add(difficulty, score);
             }
             // Achievement.full_combo_music
-            foreach (var dUid in GameFullComboMusic.FindAll((Il2CppSystem.Predicate<string>)(s => s.StartsWith($"{AlbumManager.Uid}-"))))
-            {
+            foreach(var dUid in GameFullComboMusic.FindAll((Il2CppSystem.Predicate<string>)(s => s.StartsWith($"{AlbumManager.Uid}-")))) {
                 var albumIndex = int.Parse(dUid.RemoveFromStart($"{AlbumManager.Uid}-").Split('_')[0]);
                 var difficulty = int.Parse(dUid.RemoveFromStart($"{AlbumManager.Uid}-").Split('_')[1]);
                 var albumKey = AlbumManager.GetAlbumKeyByIndex(albumIndex);
 
-                if (!AssertAlbumKeyIndex(albumKey, albumIndex))
+                if(!AssertAlbumKeyIndex(albumKey, albumIndex))
                     continue;
 
                 // New
-                if (!CustomData.FullCombo.ContainsKey(albumKey))
+                if(!CustomData.FullCombo.ContainsKey(albumKey))
                     CustomData.FullCombo.Add(albumKey, new List<int>());
                 // Append
-                if (!CustomData.FullCombo[albumKey].Contains(difficulty))
+                if(!CustomData.FullCombo[albumKey].Contains(difficulty))
                     CustomData.FullCombo[albumKey].Add(difficulty);
             }
         }
 
-        public static void CleanCustomData()
-        {
+        public static void CleanCustomData() {
             var GameAccount = Singleton<DataManager>.instance["Account"];
             var GameAchievement = Singleton<DataManager>.instance["Achievement"];
             var GameSelectedIndex = GameAccount["SelectedMusicIndex"];
@@ -196,14 +193,12 @@ namespace CustomAlbums
             var GameMasterPass = GameAchievement["master_pass"].GetResult<Il2CppSystem.Collections.Generic.List<string>>();
             var GameFullComboMusic = GameAchievement["full_combo_music"].GetResult<Il2CppSystem.Collections.Generic.List<string>>();
 
-            if (AlbumManager.MusicPackge == GameSelectedMusicPack.GetResult<string>())
-            {
+            if(AlbumManager.MusicPackge == GameSelectedMusicPack.GetResult<string>()) {
                 GameSelectedMusicPack.SetResult("music_package_0");
                 GameSelectedIndex.SetResult(new Il2CppSystem.Int32() { m_value = 0 }.BoxIl2CppObject());
                 GameSelectedDifficulty.SetResult(new Il2CppSystem.Int32() { m_value = 2 }.BoxIl2CppObject());
             }
-            if (GameSelectedMusicUidFromInfoList.GetResult<string>().StartsWith($"{AlbumManager.Uid}-"))
-            {
+            if(GameSelectedMusicUidFromInfoList.GetResult<string>().StartsWith($"{AlbumManager.Uid}-")) {
                 GameSelectedMusicUidFromInfoList.SetResult("0-0");
             }
             GameCollections.RemoveAll((Il2CppSystem.Predicate<string>)(s => s.StartsWith($"{AlbumManager.Uid}-")));
@@ -217,8 +212,11 @@ namespace CustomAlbums
             GameFullComboMusic.RemoveAll((Il2CppSystem.Predicate<string>)(s => s.StartsWith($"{AlbumManager.Uid}-")));
         }
 
-        public static void RestoreCustomData()
-        {
+        public static void RestoreCustomData() {
+            if(GameFailDictionary.Count > 0) GameFailDictionary.Clear();
+            if(EasyPassSet.Count > 0) EasyPassSet.Clear();
+            if(HardPassSet.Count > 0) HardPassSet.Clear();
+            if(MasterPassSet.Count > 0) HardPassSet.Clear();
             var GameAccount = Singleton<DataManager>.instance["Account"];
             var GameAchievement = Singleton<DataManager>.instance["Achievement"];
             var GameSelectedIndex = GameAccount["SelectedMusicIndex"];
@@ -237,8 +235,7 @@ namespace CustomAlbums
             var GameFullComboMusic = GameAchievement["full_combo_music"].GetResult<Il2CppSystem.Collections.Generic.List<string>>();
 
             // Account.SelectedAlbumUid, Account.SelectedMusicIndex, Account.SelectedDifficulty
-            if (!string.IsNullOrEmpty(CustomData.SelectedAlbum) && AlbumManager.LoadedAlbums.ContainsKey(CustomData.SelectedAlbum))
-            {
+            if(!string.IsNullOrEmpty(CustomData.SelectedAlbum) && AlbumManager.LoadedAlbums.ContainsKey(CustomData.SelectedAlbum)) {
                 var albumIndex = AlbumManager.LoadedAlbums[CustomData.SelectedAlbum].Index;
 
                 GameSelectedMusicPack.SetResult(AlbumManager.MusicPackge);
@@ -247,10 +244,8 @@ namespace CustomAlbums
                 GameSelectedMusicUidFromInfoList.SetResult($"{AlbumManager.Uid}-{albumIndex}");
             }
             // Account.Collections
-            foreach (var albumKey in CustomData.Collections)
-            {
-                if (!AlbumManager.LoadedAlbums.ContainsKey(albumKey))
-                {
+            foreach(var albumKey in CustomData.Collections) {
+                if(!AlbumManager.LoadedAlbums.ContainsKey(albumKey)) {
                     Log.Debug($"[Collections] Album \"{albumKey}\" not found, cannot restore.");
                     continue;
                 }
@@ -260,10 +255,8 @@ namespace CustomAlbums
                 GameCollections.Add(value);
             }
             // Account.Hide
-            foreach (var albumKey in CustomData.Hides)
-            {
-                if (!AlbumManager.LoadedAlbums.ContainsKey(albumKey))
-                {
+            foreach(var albumKey in CustomData.Hides) {
+                if(!AlbumManager.LoadedAlbums.ContainsKey(albumKey)) {
                     Log.Debug($"[Hides] Album \"{albumKey}\" not found, cannot restore.");
                     continue;
                 }
@@ -273,10 +266,8 @@ namespace CustomAlbums
                 GameHides.Add(value);
             }
             // Account.History
-            foreach (var albumKey in CustomData.History)
-            {
-                if (!AlbumManager.LoadedAlbums.ContainsKey(albumKey))
-                {
+            foreach(var albumKey in CustomData.History) {
+                if(!AlbumManager.LoadedAlbums.ContainsKey(albumKey)) {
                     Log.Debug($"[History] Album \"{albumKey}\" not found, cannot restore.");
                     continue;
                 }
@@ -286,18 +277,15 @@ namespace CustomAlbums
                 GameHistory.Add(value);
             }
             // Achievement.highest, Achievement.fail_count, Achievement.easy_pass, Achievement.hard_pass, Achievement.master_pass
-            foreach (var highest in CustomData.Highest)
-            {
+            foreach(var highest in CustomData.Highest) {
                 var albumKey = highest.Key;
-                if (!AlbumManager.LoadedAlbums.ContainsKey(albumKey))
-                {
+                if(!AlbumManager.LoadedAlbums.ContainsKey(albumKey)) {
                     Log.Debug($"[Highest] Album \"{albumKey}\" not found, cannot restore.");
                     continue;
                 }
                 var albumIndex = AlbumManager.LoadedAlbums[albumKey].Index;
 
-                foreach (var record in highest.Value)
-                {
+                foreach(var record in highest.Value) {
                     var difficulty = record.Key;
                     var score = record.Value;
                     var dUid = $"{AlbumManager.Uid}-{albumIndex}_{difficulty}";
@@ -318,51 +306,50 @@ namespace CustomAlbums
                     data["uid"].SetResult(dUid);
                     data["count"].SetResult(new Il2CppSystem.Int32() { m_value = score.FailCount }.BoxIl2CppObject());
                     GameFailCount.Add(data.Cast<IData>());
+                    GameFailDictionary.Add(dUid, data.Cast<IData>());
 
                     // Achievement.easy_pass, Achievement.hard_pass, Achievement.master_pass
-                    switch (difficulty)
-                    {
+                    switch(difficulty) {
                         case 1:
                             GameEasyPass.Add(dUid);
+                            EasyPassSet.Add(dUid);
                             break;
                         case 2:
                             GameHardPass.Add(dUid);
+                            HardPassSet.Add(dUid);
                             break;
                         case 3:
                         case 4:
                             GameMasterPass.Add(dUid);
+                            MasterPassSet.Add(dUid);
                             break;
                     }
                 }
             }
             // Achievement.full_combo_music
-            foreach (var fullComboMusic in CustomData.FullCombo)
-            {
+            foreach(var fullComboMusic in CustomData.FullCombo) {
                 var albumKey = fullComboMusic.Key;
-                if (!AlbumManager.LoadedAlbums.ContainsKey(albumKey))
-                {
+                if(!AlbumManager.LoadedAlbums.ContainsKey(albumKey)) {
                     Log.Debug($"[full_combo_music] Album \"{albumKey}\" not found, cannot restore.");
                     continue;
                 }
                 var albumIndex = AlbumManager.LoadedAlbums[albumKey].Index;
 
-                foreach (var difficulty in fullComboMusic.Value)
-                {
+                foreach(var difficulty in fullComboMusic.Value) {
                     var dUid = $"{AlbumManager.Uid}-{albumIndex}_{difficulty}";
                     GameFullComboMusic.Add(dUid);
                 }
             }
+
+            IsInited = true;
         }
 
-        public static bool AssertAlbumKeyIndex(string albumKey, int albumIndex)
-        {
-            if (string.IsNullOrEmpty(albumKey))
-            {
+        public static bool AssertAlbumKeyIndex(string albumKey, int albumIndex) {
+            if(string.IsNullOrEmpty(albumKey)) {
                 Log.Debug($"Not found album index: {albumIndex}");
                 return false;
             }
-            if (albumKey.StartsWith("fs_"))
-            {
+            if(albumKey.StartsWith("fs_")) {
                 Log.Debug($"Ignore folder album: {albumKey}");
                 return false;
             }
