@@ -2,7 +2,7 @@
 using MelonLoader;
 using UnityEngine;
 
-[assembly: MelonInfo(typeof(CustomAlbums.ModEntry), "CustomAlbums", "3.4.2", "Mo10 & RobotLucca")]
+[assembly: MelonInfo(typeof(CustomAlbums.ModEntry), "CustomAlbums", "3.4.3", "Mo10 & RobotLucca")]
 [assembly: MelonGame("PeroPeroGames", "MuseDash")]
 
 namespace CustomAlbums

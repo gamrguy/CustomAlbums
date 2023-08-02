@@ -1,7 +1,7 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <TargetFramework>net472</TargetFramework>
-    <Version>3.4.2.0</Version>
+    <Version>3.4.3.0</Version>
     <LangVersion>9</LangVersion>
     <MelonRefs>true</MelonRefs>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
