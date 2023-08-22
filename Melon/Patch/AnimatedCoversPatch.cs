@@ -30,7 +30,7 @@ namespace CustomAlbums.Patch
             }
 
             foreach(var cell in cells) {
-                var idx = cell.m_CellVariable.Cast<IVariable>().GetResult<int>();
+                var idx = cell.m_VariableBehaviour.Cast<IVariable>().GetResult<int>();
                 var uid = dbMusicTag.GetShowStageUidByIndex(idx);
                 var musicInfo = dbMusicTag.GetMusicInfoFromAll(uid);
                 if(musicInfo.albumJsonIndex < AlbumManager.Uid) continue;
