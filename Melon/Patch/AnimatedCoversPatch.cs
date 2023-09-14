@@ -23,6 +23,9 @@ namespace CustomAlbums.Patch
         public static void Update() {
             var dbMusicTag = GlobalDataBase.dbMusicTag;
 
+            // potential fix for null error
+            if (dbMusicTag == null) return;
+
             for(var i = cells.Count - 1; i >= 0; i--) {
                 if(cells[i] == null || !cells[i].enabled) {
                     cells.RemoveAt(i);
