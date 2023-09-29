@@ -23,6 +23,9 @@ namespace CustomAlbums.Patch
         public static void Update() {
             var dbMusicTag = GlobalDataBase.dbMusicTag;
 
+            // potential fix for null error
+            if (dbMusicTag == null) return;
+
             for(var i = cells.Count - 1; i >= 0; i--) {
                 if(cells[i] == null || !cells[i].enabled) {
                     cells.RemoveAt(i);
@@ -30,7 +33,7 @@ namespace CustomAlbums.Patch
             }
 
             foreach(var cell in cells) {
-                var idx = cell.m_CellVariable.Cast<IVariable>().GetResult<int>();
+                var idx = cell.m_VariableBehaviour.Cast<IVariable>().GetResult<int>();
                 var uid = dbMusicTag.GetShowStageUidByIndex(idx);
                 var musicInfo = dbMusicTag.GetMusicInfoFromAll(uid);
                 if(musicInfo.albumJsonIndex < AlbumManager.Uid) continue;

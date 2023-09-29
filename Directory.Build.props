@@ -12,6 +12,16 @@
             <Private>false</Private>
             <HintPath>$(MelonManaged)\Assembly-CSharp.dll</HintPath>
         </Reference>
+        <Reference Include="Assembly-CSharp-firstpass, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null">
+            <SpecificVersion>false</SpecificVersion>
+            <Private>false</Private>
+            <HintPath>$(MelonManaged)\Assembly-CSharp-firstpass.dll</HintPath>
+        </Reference>
+        <Reference Include="PeroString, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null">
+            <SpecificVersion>false</SpecificVersion>
+            <Private>false</Private>
+            <HintPath>$(MelonManaged)\PeroString.dll</HintPath>
+        </Reference>
         <Reference Include="Google.Protobuf, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null">
             <SpecificVersion>false</SpecificVersion>
             <Private>false</Private>
@@ -126,6 +136,11 @@
             <SpecificVersion>false</SpecificVersion>
             <Private>false</Private>
             <HintPath>$(MelonManaged)\UnityEngine.UnityWebRequestModule.dll</HintPath>
+        </Reference>
+        <Reference Include="UnityEngine.UI, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null">
+            <SpecificVersion>false</SpecificVersion>
+            <Private>false</Private>
+            <HintPath>$(MelonManaged)\UnityEngine.UI.dll</HintPath>
         </Reference>
 		<Reference Include="DOTween, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null">
             <SpecificVersion>false</SpecificVersion>
