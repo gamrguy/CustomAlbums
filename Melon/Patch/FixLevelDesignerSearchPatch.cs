@@ -17,7 +17,7 @@ namespace CustomAlbums.Patch
     [HarmonyPatch(typeof(SearchResults), nameof(SearchResults.PeroLevelDesigner))]
     internal static class FixLevelDesignerSearchPatch
     {
-        private static bool Prefix(ref bool __result, PeroPeroGames.PeroString peroString, MusicInfo musicInfo, string containsText) {
+        private static bool Prefix(ref bool __result, PeroTools2.PeroString.PeroString peroString, MusicInfo musicInfo, string containsText) {
             if(string.IsNullOrEmpty(containsText)) return false;
 
             __result |= peroString.LowerContains(musicInfo.levelDesigner ?? "", containsText);
@@ -32,7 +32,7 @@ namespace CustomAlbums.Patch
             return false;
         }
 
-        private static bool LowerContains(this PeroPeroGames.PeroString peroString, string compareText, string containsText) {
+        private static bool LowerContains(this PeroTools2.PeroString.PeroString peroString, string compareText, string containsText) {
             peroString.Clear();
             peroString.Append(compareText);
             peroString.ToLower();

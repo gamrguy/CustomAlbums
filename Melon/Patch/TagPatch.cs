@@ -22,7 +22,7 @@ namespace CustomAlbums.Patch
             };
             var customInfo = new CustomTagInfo {
                 tag_name = JObject.FromObject(AlbumManager.Langs).JsonSerialize().IL2CppJsonDeserialize<IL2CppJson.JObject>().ToObject<Dictionary<string, string>>(),
-                tag_picture = "https://mdmc.moe/cdn/melon.png",
+                tag_picture = "https://mdmc.moe/cdn/melon.png"
             };
             customInfo.music_list = new List<string>();
             foreach(var uid in AlbumManager.GetAllUid()) customInfo.music_list.Add(uid);
